@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+dist/
+*.tsbuildinfo
+coverage/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Generated
+prisma/migrations/*/migration_lock.toml.local

@@ -15,7 +15,7 @@ This service is the source of truth for credentials. User profile data (display 
 
 - **Tech**: Node 20 LTS, TypeScript, Express, Prisma + Neon Postgres, Jest.
 - **JWT**: HS256 (V1). Access token 15 min. Refresh token 30 days.
-- **JWT claims**: `sub` (user id, UUID v4), `role`, `iat`, `exp`. Service-JWT for internal calls uses the same shape but with a different `aud` (service name).
+- **JWT claims**: `sub` (user id, UUID v7), `role`, `iat`, `exp`. Service-JWT for internal calls uses the same shape but with a different `aud` (service name).
 - **Password hashing**: argon2id (defaults). Never bcrypt for new services.
 - **Roles**: enum at registration. V1 values: `customer`, `driver`. Admin is provisioned manually (no public registration endpoint).
 - **Events published**: `user.registered` (envelope per `logistics-contracts/schemas/event-envelope.json`).
@@ -24,6 +24,7 @@ This service is the source of truth for credentials. User profile data (display 
 ## Database (Neon Postgres)
 
 Schema (finalized in Auth spec):
+
 - `users` — id, email (unique), password_hash, role, created_at, updated_at, status (`active` / `disabled`).
 - `refresh_tokens` — id, user_id, token_hash, expires_at, revoked_at, created_from_ip, user_agent.
 - (Password reset tokens table — design TBD per Auth spec.)
@@ -39,6 +40,7 @@ Migrations: Prisma Migrate. One migration per logical change. No squashing post-
 ## Open items (decide in the Auth spec)
 
 These are deferred from the decomposition spec and need their own brainstorming session:
+
 - Exact role taxonomy (do we add `admin` as a registerable role gated by invite? add `dispatcher`? other internal roles?)
 - Refresh token rotation strategy (rotate on every use? on configurable interval?)
 - Password reset flow (token TTL, single-use, email template, rate limit per email)
