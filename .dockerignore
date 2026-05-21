@@ -1,0 +1,17 @@
+node_modules
+dist
+coverage
+.git
+.gitignore
+.editorconfig
+.nvmrc
+tests
+*.test.ts
+.env
+.env.*
+README.md
+CLAUDE.md
+docs
+.github
+.vscode
+.idea
