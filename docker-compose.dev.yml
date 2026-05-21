@@ -1,0 +1,33 @@
+# Local dev only — bring up Postgres alongside the infra stack.
+# Usage:
+#   1. Start the infra stack from logistics-infrastructure:
+#        cd ../logistics-infrastructure && ./scripts/bootstrap.sh
+#   2. Then from this repo:
+#        docker compose -f docker-compose.dev.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: logistics-auth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+      POSTGRES_DB: auth
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - auth-pg-data:/var/lib/postgresql/data
+    networks:
+      - logistics-net
+
+volumes:
+  auth-pg-data:
+
+networks:
+  logistics-net:
+    external: true # Created by logistics-infrastructure compose stack
