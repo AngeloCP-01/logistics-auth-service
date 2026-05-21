@@ -6,10 +6,15 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)\\.js$": "<rootDir>/src/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@tests/(.*)\\.js$": "<rootDir>/tests/$1",
+    "^@tests/(.*)$": "<rootDir>/tests/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   transform: {
-    "^.+\\.ts$": ["ts-jest", { useESM: true, tsconfig: { module: "ES2022" } }],
+    "^.+\\.ts$": [
+      "ts-jest",
+      { useESM: true, tsconfig: "<rootDir>/tsconfig.test.json" },
+    ],
   },
   testMatch: ["<rootDir>/tests/unit/**/*.test.ts"],
   collectCoverageFrom: [
