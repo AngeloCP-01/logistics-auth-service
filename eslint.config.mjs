@@ -22,6 +22,6 @@ export default [
     },
   },
   {
-    ignores: ["dist/", "node_modules/", "coverage/", "*.config.*"],
+    ignores: ["dist/", "node_modules/", "coverage/", "*.config.*", "prisma/migrations/", "tests/"],
   },
 ];
