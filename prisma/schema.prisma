@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AUTH_DB_URL")
+}
+
+enum Role {
+  customer
+  driver
+  admin
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+model User {
+  id              String     @id @db.Uuid
+  email           String     @unique @db.Citext
+  passwordHash    String     @map("password_hash")
+  role            Role
+  status          UserStatus @default(active)
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(6)
+  createdAt       DateTime   @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime   @map("updated_at") @db.Timestamptz(6)
+
+  refreshTokens         RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+  verificationTokens    EmailVerificationToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id            String   @id @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  tokenHash     String   @unique @map("token_hash")
+  expiresAt     DateTime @map("expires_at") @db.Timestamptz(6)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(6)
+  replacedById  String?  @map("replaced_by_id") @db.Uuid
+  createdFromIp String   @map("created_from_ip") @db.Inet
+  userAgent     String   @default("") @map("user_agent")
+  createdAt     DateTime @map("created_at") @db.Timestamptz(6)
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy  RefreshToken?  @relation("RotationChain", fields: [replacedById], references: [id], onDelete: SetNull)
+  replacedBys RefreshToken[] @relation("RotationChain")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
