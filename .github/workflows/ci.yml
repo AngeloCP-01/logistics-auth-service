@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  ci:
+    uses: angelocp-01/logistics-infrastructure/.github/workflows/node-service.yml@main
+    with:
+      service-name: auth-service
+      node-version: "20"
+      working-directory: "."
+      run-tests: true
+      push-image: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      packages: write
