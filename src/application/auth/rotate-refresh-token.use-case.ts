@@ -72,8 +72,8 @@ export class RotateRefreshTokenUseCase {
     });
 
     await this.uow.run(async () => {
-      await this.refreshTokens.save(revoked);
       await this.refreshTokens.save(next);
+      await this.refreshTokens.save(revoked);
     });
 
     const user = await this.users.byId(existing.userId);
