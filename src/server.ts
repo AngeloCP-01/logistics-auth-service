@@ -180,6 +180,15 @@ async function main(): Promise<void> {
     pinoHttp({
       logger,
       customLogLevel: (_req, res) => (res.statusCode >= 500 ? "error" : "info"),
+      redact: {
+        paths: [
+          "req.headers.authorization",
+          'req.headers["x-api-key"]',
+          "req.headers.cookie",
+          'res.headers["set-cookie"]',
+        ],
+        remove: false,
+      },
     }),
   );
   app.use(requestIdMiddleware);

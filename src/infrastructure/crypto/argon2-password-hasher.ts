@@ -15,7 +15,7 @@ const DEFAULT_OPTIONS: Argon2Options = {
 };
 
 export class Argon2PasswordHasher implements PasswordHasher {
-  private sentinelHash: string | null = null;
+  private sentinelHashPromise: Promise<string> | null = null;
   constructor(private readonly opts: Argon2Options = DEFAULT_OPTIONS) {}
 
   async hash(plaintext: string): Promise<HashedPassword> {
@@ -37,17 +37,17 @@ export class Argon2PasswordHasher implements PasswordHasher {
   }
 
   async verifyAgainstSentinel(plaintext: string): Promise<void> {
-    if (!this.sentinelHash) {
-      const v = await argon2.hash("sentinel-not-a-real-password", {
+    if (!this.sentinelHashPromise) {
+      this.sentinelHashPromise = argon2.hash("sentinel-not-a-real-password", {
         type: argon2.argon2id,
         memoryCost: this.opts.memoryCost,
         timeCost: this.opts.timeCost,
         parallelism: this.opts.parallelism,
       });
-      this.sentinelHash = v;
     }
+    const sentinelHash = await this.sentinelHashPromise;
     try {
-      await argon2.verify(this.sentinelHash, plaintext);
+      await argon2.verify(sentinelHash, plaintext);
     } catch {
       // ignore — we only care about timing
     }

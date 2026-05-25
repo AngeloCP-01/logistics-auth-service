@@ -17,8 +17,10 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
     this.byHashMap.set(token.tokenHash, token);
   }
   async revokeFamilyForward(tokenId: RefreshTokenId, now: Date): Promise<void> {
+    const seen = new Set<string>();
     let cursor: RefreshToken | undefined = this.byIdMap.get(tokenId);
-    while (cursor) {
+    while (cursor && !seen.has(cursor.id)) {
+      seen.add(cursor.id);
       cursor.revokeAlone(now);
       const next: RefreshTokenId | null = cursor.replacedById;
       cursor = next ? this.byIdMap.get(next) : undefined;
