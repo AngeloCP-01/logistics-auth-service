@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from "express";
 
 import type { JwtVerifier } from "../../../infrastructure/jwt/jwt-verifier.js";
+import { HttpError } from "../errors.js";
 
 import type { AuthedRequest } from "./types.js";
 
@@ -9,11 +10,7 @@ export function jwtAuthMiddleware(verifier: JwtVerifier) {
     const header = req.header("authorization") ?? "";
     const match = /^Bearer\s+(.+)$/.exec(header);
     if (!match) {
-      const err = Object.assign(new Error("missing bearer"), {
-        code: "unauthorized",
-        status: 401,
-      });
-      next(err);
+      next(new HttpError(401, "unauthorized", "missing bearer"));
       return;
     }
     try {
@@ -25,11 +22,7 @@ export function jwtAuthMiddleware(verifier: JwtVerifier) {
       };
       next();
     } catch {
-      const err = Object.assign(new Error("invalid token"), {
-        code: "unauthorized",
-        status: 401,
-      });
-      next(err);
+      next(new HttpError(401, "unauthorized", "invalid token"));
     }
   };
 }

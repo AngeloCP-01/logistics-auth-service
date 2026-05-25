@@ -1,3 +1,4 @@
+import { InvariantViolationError } from "../shared/errors.js";
 import type { UserId, VerificationTokenId } from "../shared/ids.js";
 
 export class EmailVerificationToken {
@@ -57,7 +58,7 @@ export class EmailVerificationToken {
 
   markUsed(now: Date): void {
     if (this._usedAt !== null) {
-      throw new Error("email verification token already used");
+      throw new InvariantViolationError("Email verification token already used");
     }
     this._usedAt = now;
   }

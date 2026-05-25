@@ -3,6 +3,7 @@ import type { Channel, ChannelModel } from "amqplib";
 
 import type { EventBus } from "../../application/ports/event-bus.js";
 import type { DomainEvent } from "../../domain/shared/domain-event.js";
+import { InfrastructureError } from "../shared/errors.js";
 import { mapDomainEvent } from "./event-mappers.js";
 
 const EXCHANGE = "logistics.events";
@@ -31,7 +32,10 @@ export class RabbitMqEventBus implements EventBus {
     correlationId: string,
   ): Promise<void> {
     if (!this.channel)
-      throw new Error("RabbitMqEventBus.connect() must be called first");
+      throw new InfrastructureError(
+        "rabbit_not_connected",
+        "RabbitMqEventBus.connect() must be called first",
+      );
     for (const e of events) {
       const out = mapDomainEvent(e, correlationId);
       const body = Buffer.from(JSON.stringify(out.envelope));

@@ -9,6 +9,7 @@ import {
   UserRegistered,
 } from "../../domain/user/events.js";
 import type { DomainEvent } from "../../domain/shared/domain-event.js";
+import { InfrastructureError } from "../shared/errors.js";
 
 export interface OutboundEvent {
   routingKey: string;
@@ -112,7 +113,8 @@ export function mapDomainEvent(
       }),
     };
   }
-  throw new Error(
+  throw new InfrastructureError(
+    "event_mapper_unmapped",
     `No mapping registered for event type ${(e as { eventType?: string }).eventType ?? "<unknown>"}`,
   );
 }

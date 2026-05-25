@@ -103,3 +103,11 @@ export class RateLimitedError extends DomainError {
     super(`Rate limited; retry after ${retryAfterSeconds}s`);
   }
 }
+
+/** Thrown when an entity's invariant is violated by a caller that didn't check state first.
+ *  These should be unreachable in production if use-cases obey the entity's contract.
+ *  Status 500 because reaching one IS a programmer bug, not user input. */
+export class InvariantViolationError extends DomainError {
+  readonly code = "invariant_violation";
+  readonly status = 500;
+}

@@ -6,6 +6,8 @@ import {
   DomainError,
   RateLimitedError,
 } from "../../../domain/shared/errors.js";
+import { InfrastructureError } from "../../../infrastructure/shared/errors.js";
+import { HttpError } from "../errors.js";
 
 import type { AuthedRequest } from "./types.js";
 
@@ -56,18 +58,17 @@ export function errorMiddleware(
     return;
   }
 
-  // Express-throw-with-status shape (used by middleware)
-  if (
-    typeof err === "object" &&
-    err !== null &&
-    "status" in err &&
-    "code" in err &&
-    typeof (err as { status: unknown }).status === "number"
-  ) {
-    const e = err as { status: number; code: string; message?: string };
-    const p = baseProblem(e.code, e.status, e.message ?? e.code);
+  if (err instanceof HttpError) {
+    const p = baseProblem(err.code, err.status, err.message);
     if (requestId) p.requestId = requestId;
     res.status(p.status).type("application/problem+json").json(p);
+    return;
+  }
+
+  if (err instanceof InfrastructureError) {
+    const p = baseProblem("internal_server_error", 500, "Internal Server Error");
+    if (requestId) p.requestId = requestId;
+    res.status(500).type("application/problem+json").json(p);
     return;
   }
 

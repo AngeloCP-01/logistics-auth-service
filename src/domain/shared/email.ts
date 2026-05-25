@@ -1,9 +1,12 @@
+import { DomainError } from "./errors.js";
+
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-export class InvalidEmailError extends Error {
+export class InvalidEmailError extends DomainError {
+  readonly code = "invalid_email";
+  readonly status = 400;
   constructor(value: string) {
     super(`Invalid email: ${value}`);
-    this.name = "InvalidEmailError";
   }
 }
 

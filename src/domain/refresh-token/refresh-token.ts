@@ -1,3 +1,4 @@
+import { InvariantViolationError } from "../shared/errors.js";
 import type { RefreshTokenId, UserId } from "../shared/ids.js";
 
 export interface RefreshTokenRotationInput {
@@ -93,7 +94,7 @@ export class RefreshToken {
 
   rotate(input: RefreshTokenRotationInput): RefreshTokenRotationResult {
     if (this._revokedAt !== null) {
-      throw new Error("refresh token already revoked");
+      throw new InvariantViolationError("Refresh token already revoked");
     }
     const next = RefreshToken.issue({
       id: input.newId,

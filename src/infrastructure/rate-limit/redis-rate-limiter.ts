@@ -3,6 +3,7 @@ import type {
   RateLimiter,
   RateLimitResult,
 } from "../../application/ports/rate-limiter.js";
+import { InfrastructureError } from "../shared/errors.js";
 
 export class RedisRateLimiter implements RateLimiter {
   constructor(private readonly redis: Redis) {}
@@ -12,7 +13,11 @@ export class RedisRateLimiter implements RateLimiter {
     pipe.incr(key);
     pipe.expire(key, windowSeconds);
     const results = await pipe.exec();
-    if (!results) throw new Error("Redis pipeline returned null");
+    if (!results)
+      throw new InfrastructureError(
+        "redis_pipeline_null",
+        "Redis pipeline returned null",
+      );
     return Number(results[0]?.[1] ?? 0);
   }
 
@@ -42,7 +47,11 @@ export class RedisRateLimiter implements RateLimiter {
     pipe.incr(key);
     pipe.ttl(key);
     const results = await pipe.exec();
-    if (!results) throw new Error("Redis pipeline returned null");
+    if (!results)
+      throw new InfrastructureError(
+        "redis_pipeline_null",
+        "Redis pipeline returned null",
+      );
     const count = Number(results[0]?.[1] ?? 0);
     let remaining = Number(results[1]?.[1] ?? 0);
     if (remaining < 0) {

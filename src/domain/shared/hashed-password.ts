@@ -1,9 +1,12 @@
+import { DomainError } from "./errors.js";
+
 const ARGON2ID_PREFIX = "$argon2id$";
 
-export class InvalidHashedPasswordError extends Error {
+export class InvalidHashedPasswordError extends DomainError {
+  readonly code = "invalid_hashed_password";
+  readonly status = 500;
   constructor() {
     super("HashedPassword expects an argon2id-encoded string");
-    this.name = "InvalidHashedPasswordError";
   }
 }
 

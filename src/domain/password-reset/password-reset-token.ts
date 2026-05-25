@@ -1,3 +1,4 @@
+import { InvariantViolationError } from "../shared/errors.js";
 import type { ResetTokenId, UserId } from "../shared/ids.js";
 
 export class PasswordResetToken {
@@ -57,7 +58,7 @@ export class PasswordResetToken {
 
   markUsed(now: Date): void {
     if (this._usedAt !== null) {
-      throw new Error("password reset token already used");
+      throw new InvariantViolationError("Password reset token already used");
     }
     this._usedAt = now;
   }

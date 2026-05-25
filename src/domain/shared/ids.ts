@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { InvariantViolationError } from "./errors.js";
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-7][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -12,7 +14,9 @@ export type VerificationTokenId = Brand<string, "VerificationTokenId">;
 
 function assertUuid(value: string, name: string): void {
   if (!UUID_REGEX.test(value)) {
-    throw new Error(`${name} must be a UUID, got: ${value}`);
+    throw new InvariantViolationError(
+      `${name} must be a UUID, got: ${value}`,
+    );
   }
 }
 

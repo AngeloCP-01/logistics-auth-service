@@ -1,5 +1,6 @@
 import type { DomainEvent } from "../shared/domain-event.js";
 import type { Email } from "../shared/email.js";
+import { InvariantViolationError } from "../shared/errors.js";
 import type { HashedPassword } from "../shared/hashed-password.js";
 import type { UserId } from "../shared/ids.js";
 import {
@@ -95,7 +96,7 @@ export class User {
 
   changeRole(newRole: Role, changedBy: UserId, now: Date): void {
     if (newRole === this._role) {
-      throw new Error("role unchanged");
+      throw new InvariantViolationError("Role unchanged");
     }
     const old = this._role;
     this._role = newRole;
