@@ -15,7 +15,8 @@ This service is the source of truth for credentials. User profile data (display 
 
 - **Tech**: Node 20 LTS, TypeScript, Express, Prisma + Neon Postgres, Jest.
 - **JWT**: HS256 (V1). Access token 15 min. Refresh token 30 days.
-- **JWT claims**: `sub` (user id, UUID v7), `role`, `iat`, `exp`. Service-JWT for internal calls uses the same shape but with a different `aud` (service name).
+- **JWT claims (user)**: `sub` (user id, UUID v7), `role`, `iat`, `exp`. Signed with `AUTH_JWT_SECRET`. Carried in `Authorization: Bearer …`.
+- **JWT claims (service)**: same `iat`/`exp` plus `sub: "svc:<caller-service-name>"` and `aud: "<target-service-name>"`. Signed with `SERVICE_JWT_SECRET` (a separate secret, distinct from `AUTH_JWT_SECRET`). Carried in `X-Service-Authorization: Bearer …`. Self-minted by every caller (auth-service is not the minter for service JWTs — see gateway spec §1 decision #2). Each service that needs to verify service JWTs has `SERVICE_JWT_SECRET` in its env.
 - **Password hashing**: argon2id (defaults). Never bcrypt for new services.
 - **Roles**: enum at registration. V1 values: `customer`, `driver`. Admin is provisioned manually (no public registration endpoint).
 - **Events published**: `user.registered` (envelope per `logistics-contracts/schemas/event-envelope.json`).
