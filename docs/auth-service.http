@@ -1,0 +1,254 @@
+### auth-service local exercise file
+# REST Client (VS Code) — runs every endpoint of the service.
+# Boot the server first: `npm run dev` (loads .env via tsx --env-file).
+#
+# Usage:
+#   1. Click "Send Request" above any request.
+#   2. After running "Login", subsequent requests automatically use {{login.response.body.accessToken}}.
+#   3. To exercise admin endpoints, register a user then hand-promote them via Prisma (see "promote-to-admin" section below).
+#
+# Order matters: Register → Login → Me → Refresh → Logout → password-reset round-trip → verify-email round-trip.
+
+@host = http://localhost:3000
+@contentType = application/json
+
+# Synthetic test identities — change between runs if you don't reset the DB.
+@email = customer@example.com
+@password = password123
+@adminEmail = admin@example.com
+@adminPassword = password123
+
+
+############################################################
+# Health
+############################################################
+
+### healthz — liveness (always 200)
+GET {{host}}/healthz
+
+### readyz — readiness (200 when DB + Rabbit are healthy)
+GET {{host}}/readyz
+
+
+############################################################
+# Public auth flow
+############################################################
+
+### Register a new customer
+# @name register
+POST {{host}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "role": "customer"
+}
+
+
+### Login — captures accessToken + refreshToken for later requests
+# @name login
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+
+### Me — bearer-auth; reads JWT from the previous login response
+GET {{host}}/auth/me
+Authorization: Bearer {{login.response.body.accessToken}}
+
+
+### Refresh — rotates the refresh token; old token is now revoked
+# @name refresh
+POST {{host}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{login.response.body.refreshToken}}"
+}
+
+
+### Reuse the OLD refresh token (after refresh ran) — expect 401 + token_reused
+# Run "Refresh" above first; this proves family-revocation.
+POST {{host}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{login.response.body.refreshToken}}"
+}
+
+
+### Logout — revokes the (current) refresh token. Bearer-auth.
+POST {{host}}/auth/logout
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refresh.response.body.refreshToken}}"
+}
+
+
+############################################################
+# Password reset (AUTH_RETURN_RESET_TOKEN=true returns the token in body)
+############################################################
+
+### Request a password reset — always returns 202; dev flag returns the token
+# @name resetRequest
+POST {{host}}/auth/password-reset/request
+Content-Type: {{contentType}}
+
+{
+  "email": "{{email}}"
+}
+
+
+### Confirm the password reset (uses the token from the previous response)
+POST {{host}}/auth/password-reset/confirm
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetRequest.response.body.token}}",
+  "newPassword": "password123"
+}
+
+
+### Login with the new password
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{email}}",
+  "password": "password123"
+}
+
+
+############################################################
+# Email verification (AUTH_RETURN_VERIFICATION_TOKEN=true returns the token)
+############################################################
+
+### Resend verification token — bearer-auth (must be logged in). Dev flag returns the token.
+# @name resendVerification
+POST {{host}}/auth/verify-email/resend
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: {{contentType}}
+
+
+### Verify the email using the returned token
+POST {{host}}/auth/verify-email
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resendVerification.response.body.token}}"
+}
+
+
+### Me — emailVerified should now be true
+GET {{host}}/auth/me
+Authorization: Bearer {{login.response.body.accessToken}}
+
+
+############################################################
+# Admin endpoints
+############################################################
+#
+# Admins cannot self-register. Steps to exercise:
+#   1. Register {{adminEmail}} as role=customer (next request).
+#   2. Hand-promote via Prisma:
+#        docker exec logistics-auth-postgres psql -U auth -d auth \
+#          -c "UPDATE users SET role = 'admin' WHERE email = '{{adminEmail}}';"
+#   3. Login as the admin (next-next request) to get an admin-scoped JWT.
+#   4. Use {{adminLogin.response.body.accessToken}} in the admin requests.
+#
+############################################################
+
+### Register the admin (initially as customer)
+POST {{host}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}",
+  "role": "customer"
+}
+
+
+### Login as admin (after hand-promoting via Prisma)
+# @name adminLogin
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+
+### Change a user's role (admin-only)
+# Replace USER_ID with a real id from the register response (or /auth/me).
+# Captures the response so you can see the updated profile.
+POST {{host}}/auth/users/USER_ID/role
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "driver"
+}
+
+
+### Unlock a locked user (admin-only) — clears the per-email lockout counter
+POST {{host}}/auth/users/USER_ID/unlock
+Authorization: Bearer {{adminLogin.response.body.accessToken}}
+
+
+############################################################
+# Negative-path probes (intentionally fail; for spot-checking error shapes)
+############################################################
+
+### Register with invalid email — expect 400 + RFC 7807 validation_failed
+POST {{host}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "not-an-email",
+  "password": "hunter2pass",
+  "role": "customer"
+}
+
+
+### Register with admin role — expect 400 (admin is excluded from public registration)
+POST {{host}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "should-fail@example.com",
+  "password": "hunter2pass",
+  "role": "admin"
+}
+
+
+### Login with wrong password — expect 401 invalid_credentials
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{email}}",
+  "password": "wrongpassword"
+}
+
+
+### Me without auth — expect 401 unauthorized
+GET {{host}}/auth/me
+
+
+### Me with bogus token — expect 401 unauthorized
+GET {{host}}/auth/me
+Authorization: Bearer not.a.real.jwt
+
+
+### Admin endpoint as non-admin — expect 403 forbidden
+POST {{host}}/auth/users/00000000-0000-0000-0000-000000000001/unlock
+Authorization: Bearer {{login.response.body.accessToken}}
