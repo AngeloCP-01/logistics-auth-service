@@ -13,7 +13,7 @@ module.exports = {
   transform: {
     "^.+\\.ts$": [
       "ts-jest",
-      { useESM: true, tsconfig: "<rootDir>/tsconfig.test.json" },
+      { useESM: true, tsconfig: "<rootDir>/tsconfig.json" },
     ],
   },
   testMatch: ["<rootDir>/tests/integration/**/*.int.test.ts"],

@@ -6,7 +6,7 @@
   "description": "Authentication service for the AI Logistics Platform.",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json",
     "start": "node dist/server.js",
     "dev": "tsx watch --env-file=.env src/server.ts",
     "typecheck": "tsc --noEmit",
