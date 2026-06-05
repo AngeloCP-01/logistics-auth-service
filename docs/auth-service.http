@@ -13,7 +13,7 @@
 @contentType = application/json
 
 # Synthetic test identities — change between runs if you don't reset the DB.
-@email = customer@example.com
+@email = customer3@example.com
 @password = password123
 @adminEmail = admin@example.com
 @adminPassword = password123
