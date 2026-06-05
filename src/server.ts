@@ -1,3 +1,4 @@
+import type http from "node:http";
 import express from "express";
 import pino from "pino";
 import pinoHttp from "pino-http";
@@ -38,6 +39,38 @@ import { errorMiddlewareExpress } from "./interfaces/http/middleware/error.js";
 import { requestIdMiddleware } from "./interfaces/http/middleware/request-id.js";
 import { mountRoutes } from "./interfaces/http/routes.js";
 
+/**
+ * A boot-time failure attributed to a specific dependency/config, so the log
+ * names WHAT failed (Postgres? RabbitMQ? the port?) and how to fix it — instead
+ * of surfacing a raw driver message like "403 ACCESS-REFUSED" with no context.
+ */
+class BootError extends Error {
+  constructor(
+    readonly dependency: string,
+    readonly envVar: string | null,
+    readonly hint: string | null,
+    cause: unknown,
+  ) {
+    const causeMsg = cause instanceof Error ? cause.message : String(cause);
+    super(
+      `Failed to ${dependency}${envVar ? ` (check ${envVar})` : ""}: ${causeMsg}` +
+        (hint ? ` — ${hint}` : ""),
+    );
+    this.name = "BootError";
+  }
+}
+
+async function bootStep<T>(
+  meta: { what: string; envVar?: string; hint?: string },
+  fn: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (cause) {
+    throw new BootError(meta.what, meta.envVar ?? null, meta.hint ?? null, cause);
+  }
+}
+
 async function main(): Promise<void> {
   const env = loadEnv();
   const logger = pino({
@@ -46,13 +79,29 @@ async function main(): Promise<void> {
   });
 
   const prisma = buildPrismaClient(env.AUTH_DB_URL);
-  await prisma.$connect();
+  await bootStep(
+    { what: "connect to Postgres", envVar: "AUTH_DB_URL", hint: "is the database reachable and the URL/credentials correct?" },
+    () => prisma.$connect(),
+  );
 
-  const redis = new Redis(env.REDIS_URL);
-  await redis.ping();
+  // ioredis connects lazily — constructing the client does not surface a bad host.
+  // We pass maxRetriesPerRequest:1 + connectTimeout:5000 to bound the failure window,
+  // then verify reachability explicitly with ping() inside bootStep.
+  const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, connectTimeout: 5000 });
+  await bootStep(
+    { what: "connect to Redis", envVar: "REDIS_URL", hint: "is Redis running and REDIS_URL correct?" },
+    () => redis.ping(),
+  );
 
   const eventBus = new RabbitMqEventBus(env.RABBITMQ_URL);
-  await eventBus.connect();
+  await bootStep(
+    {
+      what: "connect to RabbitMQ",
+      envVar: "RABBITMQ_URL",
+      hint: "is the broker running and the credentials right? (the platform `logistics-rabbitmq` uses dev/dev, not guest/guest)",
+    },
+    () => eventBus.connect(),
+  );
 
   const clock = new SystemClock();
   const uow = new PrismaUnitOfWork(prisma);
@@ -213,9 +262,18 @@ async function main(): Promise<void> {
   });
   app.use(errorMiddlewareExpress);
 
-  const server = app.listen(env.AUTH_PORT, () => {
-    logger.info({ port: env.AUTH_PORT }, "request_started_listening");
-  });
+  const server = await bootStep(
+    { what: "bind the HTTP server", envVar: "AUTH_PORT", hint: "is the port already in use?" },
+    () =>
+      new Promise<http.Server>((resolve, reject) => {
+        const s = app.listen(env.AUTH_PORT, () => {
+          s.off("error", reject);
+          resolve(s);
+        });
+        s.once("error", reject);
+      }),
+  );
+  logger.info({ port: env.AUTH_PORT }, "request_started_listening");
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, "shutdown_begin");
@@ -230,8 +288,16 @@ async function main(): Promise<void> {
   process.on("SIGINT", () => void shutdown("SIGINT"));
 }
 
-void main().catch((err) => {
-  // Use direct console because pino may not have initialized
-  console.error("FATAL boot failure:", err);
+main().catch((err) => {
+  const isBoot = err instanceof BootError;
+  process.stderr.write(
+    JSON.stringify({
+      level: "error",
+      event: "boot_failed",
+      dependency: isBoot ? err.dependency : undefined,
+      configHint: isBoot ? err.envVar ?? undefined : undefined,
+      message: err instanceof Error ? err.message : String(err),
+    }) + "\n",
+  );
   process.exit(1);
 });
