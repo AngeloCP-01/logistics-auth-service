@@ -72,10 +72,17 @@ export function errorMiddleware(
     return;
   }
 
-  // Unknown — log via res.locals (server.ts wires the logger) and return 500 generic.
+  // Unknown — return 500. In non-production, surface the cause in the RESPONSE so a
+  // 500 is debuggable without tailing logs. NEVER in production (leaks internals).
   const p = baseProblem("internal_server_error", 500, "Internal Server Error");
   if (requestId) p.requestId = requestId;
-  res.status(500).type("application/problem+json").json(p);
+  const out: Record<string, unknown> = { ...p };
+  if (process.env.NODE_ENV !== "production" && err instanceof Error) {
+    out.detail = err.message;
+    out.errorName = err.name;
+    out.stack = err.stack?.split("\n").slice(1, 6).map((l) => l.trim());
+  }
+  res.status(500).type("application/problem+json").json(out);
 }
 
 // Express's error middleware needs the (err, req, res, next) signature.
