@@ -14,7 +14,7 @@ export interface MountRoutesDeps {
 }
 
 export function mountRoutes(app: Express, deps: MountRoutesDeps): void {
-  app.use("/auth", buildAuthRouter(deps.authDeps));
-  app.use("/auth", buildAdminRouter(deps.adminDeps));
+  app.use("/v1/auth", buildAuthRouter(deps.authDeps));
+  app.use("/v1/auth", buildAdminRouter(deps.adminDeps));
   app.use(buildHealthRouter(deps.healthDeps));
 }

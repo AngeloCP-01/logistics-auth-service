@@ -52,7 +52,7 @@ beforeEach(async () => {
 
 describe("HTTP auth flow", () => {
   it("register → login → /me → refresh → reuse-detection", async () => {
-    const reg = await request(built.app).post("/auth/register").send({
+    const reg = await request(built.app).post("/v1/auth/register").send({
       email: "alice@example.com",
       password: "supersecret",
       role: "customer",
@@ -61,7 +61,7 @@ describe("HTTP auth flow", () => {
     const userId: string = reg.body.userId;
 
     const login = await request(built.app)
-      .post("/auth/login")
+      .post("/v1/auth/login")
       .send({ email: "alice@example.com", password: "supersecret" });
     expect(login.status).toBe(200);
     const { accessToken, refreshToken } = login.body as {
@@ -70,7 +70,7 @@ describe("HTTP auth flow", () => {
     };
 
     const me = await request(built.app)
-      .get("/auth/me")
+      .get("/v1/auth/me")
       .set("Authorization", `Bearer ${accessToken}`);
     expect(me.status).toBe(200);
     expect(me.body).toMatchObject({
@@ -81,21 +81,21 @@ describe("HTTP auth flow", () => {
     });
 
     const refresh = await request(built.app)
-      .post("/auth/refresh")
+      .post("/v1/auth/refresh")
       .send({ refreshToken });
     expect(refresh.status).toBe(200);
     expect(refresh.body.refreshToken).not.toBe(refreshToken);
 
     // Reuse: present the old refresh token after rotation.
     const reuse = await request(built.app)
-      .post("/auth/refresh")
+      .post("/v1/auth/refresh")
       .send({ refreshToken });
     expect(reuse.status).toBe(401);
     expect(reuse.body.type).toMatch(/token_reused/);
 
     // And the new refresh (issued in the prior step) is now also revoked.
     const reuseNew = await request(built.app)
-      .post("/auth/refresh")
+      .post("/v1/auth/refresh")
       .send({ refreshToken: refresh.body.refreshToken });
     expect(reuseNew.status).toBe(401);
   });
@@ -103,7 +103,7 @@ describe("HTTP auth flow", () => {
   it("lockout after 5 bad passwords; cleared by admin unlock", async () => {
     // Seed an admin manually
     await request(built.app)
-      .post("/auth/register")
+      .post("/v1/auth/register")
       .send({
         email: "victim@example.com",
         password: "thispassword",
@@ -111,7 +111,7 @@ describe("HTTP auth flow", () => {
       })
       .expect(201);
     await request(built.app)
-      .post("/auth/register")
+      .post("/v1/auth/register")
       .send({
         email: "admin@example.com",
         password: "adminpassword",
@@ -131,20 +131,20 @@ describe("HTTP auth flow", () => {
     // Five bad logins → lockout.
     for (let i = 0; i < 5; i++) {
       await request(built.app)
-        .post("/auth/login")
+        .post("/v1/auth/login")
         .set("X-Forwarded-For", "10.0.0.1")
         .send({ email: "victim@example.com", password: "wrong" })
         .expect(401);
     }
     await request(built.app)
-      .post("/auth/login")
+      .post("/v1/auth/login")
       .set("X-Forwarded-For", "10.0.0.1")
       .send({ email: "victim@example.com", password: "thispassword" })
       .expect(423);
 
     // Admin logs in and unlocks.
     const adminLogin = await request(built.app)
-      .post("/auth/login")
+      .post("/v1/auth/login")
       .set("X-Forwarded-For", "10.0.0.2")
       .send({ email: "admin@example.com", password: "adminpassword" })
       .expect(200);
@@ -153,13 +153,13 @@ describe("HTTP auth flow", () => {
       where: { email: "victim@example.com" },
     });
     await request(built.app)
-      .post(`/auth/users/${victim!.id}/unlock`)
+      .post(`/v1/auth/users/${victim!.id}/unlock`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Forwarded-For", "10.0.0.2")
       .expect(204);
 
     await request(built.app)
-      .post("/auth/login")
+      .post("/v1/auth/login")
       .set("X-Forwarded-For", "10.0.0.3")
       .send({ email: "victim@example.com", password: "thispassword" })
       .expect(200);
