@@ -36,7 +36,7 @@ GET {{host}}/readyz
 
 ### Register a new customer
 # @name register
-POST {{host}}/auth/register
+POST {{host}}/v1/auth/register
 Content-Type: {{contentType}}
 
 {
@@ -48,7 +48,7 @@ Content-Type: {{contentType}}
 
 ### Login — captures accessToken + refreshToken for later requests
 # @name login
-POST {{host}}/auth/login
+POST {{host}}/v1/auth/login
 Content-Type: {{contentType}}
 
 {
@@ -58,13 +58,13 @@ Content-Type: {{contentType}}
 
 
 ### Me — bearer-auth; reads JWT from the previous login response
-GET {{host}}/auth/me
+GET {{host}}/v1/auth/me
 Authorization: Bearer {{login.response.body.accessToken}}
 
 
 ### Refresh — rotates the refresh token; old token is now revoked
 # @name refresh
-POST {{host}}/auth/refresh
+POST {{host}}/v1/auth/refresh
 Content-Type: {{contentType}}
 
 {
@@ -74,7 +74,7 @@ Content-Type: {{contentType}}
 
 ### Reuse the OLD refresh token (after refresh ran) — expect 401 + token_reused
 # Run "Refresh" above first; this proves family-revocation.
-POST {{host}}/auth/refresh
+POST {{host}}/v1/auth/refresh
 Content-Type: {{contentType}}
 
 {
@@ -83,7 +83,7 @@ Content-Type: {{contentType}}
 
 
 ### Logout — revokes the (current) refresh token. Bearer-auth.
-POST {{host}}/auth/logout
+POST {{host}}/v1/auth/logout
 Authorization: Bearer {{login.response.body.accessToken}}
 Content-Type: {{contentType}}
 
@@ -98,7 +98,7 @@ Content-Type: {{contentType}}
 
 ### Request a password reset — always returns 202; dev flag returns the token
 # @name resetRequest
-POST {{host}}/auth/password-reset/request
+POST {{host}}/v1/auth/password-reset/request
 Content-Type: {{contentType}}
 
 {
@@ -107,7 +107,7 @@ Content-Type: {{contentType}}
 
 
 ### Confirm the password reset (uses the token from the previous response)
-POST {{host}}/auth/password-reset/confirm
+POST {{host}}/v1/auth/password-reset/confirm
 Content-Type: {{contentType}}
 
 {
@@ -117,7 +117,7 @@ Content-Type: {{contentType}}
 
 
 ### Login with the new password
-POST {{host}}/auth/login
+POST {{host}}/v1/auth/login
 Content-Type: {{contentType}}
 
 {
@@ -132,13 +132,13 @@ Content-Type: {{contentType}}
 
 ### Resend verification token — bearer-auth (must be logged in). Dev flag returns the token.
 # @name resendVerification
-POST {{host}}/auth/verify-email/resend
+POST {{host}}/v1/auth/verify-email/resend
 Authorization: Bearer {{login.response.body.accessToken}}
 Content-Type: {{contentType}}
 
 
 ### Verify the email using the returned token
-POST {{host}}/auth/verify-email
+POST {{host}}/v1/auth/verify-email
 Content-Type: {{contentType}}
 
 {
@@ -147,7 +147,7 @@ Content-Type: {{contentType}}
 
 
 ### Me — emailVerified should now be true
-GET {{host}}/auth/me
+GET {{host}}/v1/auth/me
 Authorization: Bearer {{login.response.body.accessToken}}
 
 
@@ -166,7 +166,7 @@ Authorization: Bearer {{login.response.body.accessToken}}
 ############################################################
 
 ### Register the admin (initially as customer)
-POST {{host}}/auth/register
+POST {{host}}/v1/auth/register
 Content-Type: {{contentType}}
 
 {
@@ -178,7 +178,7 @@ Content-Type: {{contentType}}
 
 ### Login as admin (after hand-promoting via Prisma)
 # @name adminLogin
-POST {{host}}/auth/login
+POST {{host}}/v1/auth/login
 Content-Type: {{contentType}}
 
 {
@@ -188,9 +188,9 @@ Content-Type: {{contentType}}
 
 
 ### Change a user's role (admin-only)
-# Replace USER_ID with a real id from the register response (or /auth/me).
+# Replace USER_ID with a real id from the register response (or /v1/auth/me).
 # Captures the response so you can see the updated profile.
-POST {{host}}/auth/users/USER_ID/role
+POST {{host}}/v1/auth/users/USER_ID/role
 Authorization: Bearer {{adminLogin.response.body.accessToken}}
 Content-Type: {{contentType}}
 
@@ -200,7 +200,7 @@ Content-Type: {{contentType}}
 
 
 ### Unlock a locked user (admin-only) — clears the per-email lockout counter
-POST {{host}}/auth/users/USER_ID/unlock
+POST {{host}}/v1/auth/users/USER_ID/unlock
 Authorization: Bearer {{adminLogin.response.body.accessToken}}
 
 
@@ -209,7 +209,7 @@ Authorization: Bearer {{adminLogin.response.body.accessToken}}
 ############################################################
 
 ### Register with invalid email — expect 400 + RFC 7807 validation_failed
-POST {{host}}/auth/register
+POST {{host}}/v1/auth/register
 Content-Type: {{contentType}}
 
 {
@@ -220,7 +220,7 @@ Content-Type: {{contentType}}
 
 
 ### Register with admin role — expect 400 (admin is excluded from public registration)
-POST {{host}}/auth/register
+POST {{host}}/v1/auth/register
 Content-Type: {{contentType}}
 
 {
@@ -231,7 +231,7 @@ Content-Type: {{contentType}}
 
 
 ### Login with wrong password — expect 401 invalid_credentials
-POST {{host}}/auth/login
+POST {{host}}/v1/auth/login
 Content-Type: {{contentType}}
 
 {
@@ -241,14 +241,14 @@ Content-Type: {{contentType}}
 
 
 ### Me without auth — expect 401 unauthorized
-GET {{host}}/auth/me
+GET {{host}}/v1/auth/me
 
 
 ### Me with bogus token — expect 401 unauthorized
-GET {{host}}/auth/me
+GET {{host}}/v1/auth/me
 Authorization: Bearer not.a.real.jwt
 
 
 ### Admin endpoint as non-admin — expect 403 forbidden
-POST {{host}}/auth/users/00000000-0000-0000-0000-000000000001/unlock
+POST {{host}}/v1/auth/users/00000000-0000-0000-0000-000000000001/unlock
 Authorization: Bearer {{login.response.body.accessToken}}
