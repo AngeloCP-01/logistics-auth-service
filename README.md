@@ -209,17 +209,17 @@ See `../logistics-contracts/openapi/auth-service.yaml` (v0.2.0) for the authorit
 
 | Method | Path                           | Auth                  |
 | ------ | ------------------------------ | --------------------- |
-| POST   | `/auth/register`               | public                |
-| POST   | `/auth/login`                  | public                |
-| POST   | `/auth/logout`                 | bearer                |
-| POST   | `/auth/refresh`                | refresh-token-in-body |
-| POST   | `/auth/password-reset/request` | public                |
-| POST   | `/auth/password-reset/confirm` | public                |
-| POST   | `/auth/verify-email`           | public                |
-| POST   | `/auth/verify-email/resend`    | bearer                |
-| GET    | `/auth/me`                     | bearer                |
-| POST   | `/auth/users/{id}/role`        | bearer (admin)        |
-| POST   | `/auth/users/{id}/unlock`      | bearer (admin)        |
+| POST   | `/v1/auth/register`               | public                |
+| POST   | `/v1/auth/login`                  | public                |
+| POST   | `/v1/auth/logout`                 | bearer                |
+| POST   | `/v1/auth/refresh`                | refresh-token-in-body |
+| POST   | `/v1/auth/password-reset/request` | public                |
+| POST   | `/v1/auth/password-reset/confirm` | public                |
+| POST   | `/v1/auth/verify-email`           | public                |
+| POST   | `/v1/auth/verify-email/resend`    | bearer                |
+| GET    | `/v1/auth/me`                     | bearer                |
+| POST   | `/v1/auth/users/{id}/role`        | bearer (admin)        |
+| POST   | `/v1/auth/users/{id}/unlock`      | bearer (admin)        |
 | GET    | `/healthz`                     | public                |
 | GET    | `/readyz`                      | public                |
 
