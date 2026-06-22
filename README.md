@@ -244,3 +244,5 @@ This repo follows the platform's coding-principles and coding-conventions docume
 - Strict TDD on `domain/` and `application/`. Risk-based integration tests on `infrastructure/` and `interfaces/`.
 - Errors: typed `DomainError` subclasses; central middleware maps to RFC 7807.
 - Vendored configs: `tsconfig.base.json`, `eslint.config.mjs`, `prettier.config.mjs` are copies of the canonical at `logistics-infrastructure/shared/`.
+
+> Part of the [AI Logistics & Delivery Management Platform](https://github.com/AngeloCP-01/logistics-web#readme) — see the web repo for the full architecture overview.
